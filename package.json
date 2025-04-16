@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "cropperjs": "^1.6.2",
+    "vue-cropper": "^0.6.5"
+  }
+}
+

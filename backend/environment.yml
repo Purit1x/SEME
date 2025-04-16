@@ -1,0 +1,43 @@
+name: se
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  # Python环境
+  - python=3.11
+  
+  # Web框架相关
+  - flask=3.0.0
+  - flask-sqlalchemy=3.1.1
+  - flask-migrate=4.0.5
+  - flask-jwt-extended=4.5.3
+  - flask-cors=4.0.0
+  
+  # 数据库相关
+  - pymysql=1.1.0
+  
+  # 深度学习相关
+  - pytorch=2.1.0
+  - torchvision=0.16.0
+  - cudatoolkit=11.8
+  
+  # 科学计算和图像处理
+  - numpy=1.24.3
+  - opencv=4.8.1
+  - pillow=10.1.0
+  
+  # 工具类库
+  - python-dotenv=1.0.0
+  - email-validator=2.1.0
+  - bcrypt=4.0.1
+  - pip=23.3.1
+  
+  # pip安装的依赖
+  - pip:
+    - flask-migrate==4.0.5
+    - pydicom==2.4.3
+    - python-jose==3.3.0
+    - email-validator==2.1.0.post1
+    - cryptography==41.0.5
