@@ -1,0 +1,7 @@
+# 忽略所有文件
+
+# 不忽略.gitkeep
+!.gitkeep
+!default.png
+
+# 不忽略.gitignore 
