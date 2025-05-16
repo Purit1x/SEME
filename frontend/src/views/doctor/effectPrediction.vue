@@ -7,7 +7,7 @@
                     <span>MRI图像浏览器</span>
                 </div>
             </template>
-            
+
             <!-- 面包屑导航 -->
             <el-breadcrumb v-if="currentPath.length > 0" class="breadcrumb">
                 <el-breadcrumb-item @click="navigateTo(-1)">根目录</el-breadcrumb-item>
@@ -130,13 +130,15 @@
                     <div class="result-image-item">
                         <h4>布针图</h4>
                         <div class="result-image-container">
-                            <img :src="predictionResult.needledImageUrl" alt="布针图" class="result-image" v-loading="predicting" />
+                            <img :src="predictionResult.needledImageUrl" alt="布针图" class="result-image"
+                                v-loading="predicting" />
                         </div>
                     </div>
                     <div class="result-image-item">
                         <h4>预测结果</h4>
                         <div class="result-image-container">
-                            <img :src="predictionResult.resultUrl" alt="预测结果" class="result-image" v-loading="predicting" />
+                            <img :src="predictionResult.resultUrl" alt="预测结果" class="result-image"
+                                v-loading="predicting" />
                         </div>
                     </div>
                 </div>
@@ -414,7 +416,7 @@ const nextImage = async () => {
 // 提交预测
 const submitForm = async () => {
     if (!predictionFormRef.value) return
-    
+
     await predictionFormRef.value.validate(async (valid) => {
         if (valid) {
             try {
@@ -852,14 +854,18 @@ onMounted(() => {
     background-color: #f5f7fa;
 }
 
-.file-explorer, .operation-area, .result-area {
+.file-explorer,
+.operation-area,
+.result-area {
     background: white;
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     transition: all 0.3s ease;
 }
 
-.file-explorer:hover, .operation-area:hover, .result-area:hover {
+.file-explorer:hover,
+.operation-area:hover,
+.result-area:hover {
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
 }
 
@@ -1104,6 +1110,7 @@ onMounted(() => {
 :deep(.el-button--primary) {
     background-color: #409eff;
     border-color: #409eff;
+
     &:hover {
         background-color: #66b1ff;
         border-color: #66b1ff;
@@ -1113,6 +1120,7 @@ onMounted(() => {
 :deep(.el-button--success) {
     background-color: #67c23a;
     border-color: #67c23a;
+
     &:hover {
         background-color: #85ce61;
         border-color: #85ce61;
@@ -1121,11 +1129,13 @@ onMounted(() => {
 
 :deep(.el-breadcrumb__item) {
     cursor: pointer;
+
     .el-breadcrumb__inner {
         color: #606266;
+
         &:hover {
             color: #409eff;
         }
     }
 }
-</style> 
+</style>
