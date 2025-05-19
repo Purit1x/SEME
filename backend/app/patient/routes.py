@@ -1,3 +1,6 @@
+# 患者模块路由文件
+# 处理所有与患者信息相关的路由，包括创建、查询、更新等功能
+
 import os
 from flask import request, jsonify, current_app, url_for, send_from_directory
 from flask_jwt_extended import jwt_required, get_jwt_identity
@@ -8,19 +11,50 @@ from app.patient import bp
 import re
 
 def allowed_file(filename):
-    """检查文件类型是否允许"""
+    """
+    检查文件类型是否允许
+    
+    Args:
+        filename: 文件名
+    
+    Returns:
+        bool: 如果文件类型允许返回True，否则返回False
+    """
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def validate_id_number(id_number):
-    """验证身份证号码格式"""
+    """
+    验证身份证号码格式
+    
+    Args:
+        id_number: 身份证号码
+    
+    Returns:
+        bool: 如果身份证号码格式正确返回True，否则返回False
+    """
     # 身份证号码为18位
     if not re.match(r'^\d{17}[\dXx]$', id_number):
         return False
     return True
 
 def validate_patient_info(data):
-    """验证患者信息"""
+    """
+    验证患者信息
+    
+    验证规则：
+    1. 必填字段：姓名、性别、年龄、身份证号
+    2. 姓名长度：2-50个字符
+    3. 性别：必须是"男"或"女"
+    4. 年龄：0-150岁之间的数字
+    5. 身份证号：18位，最后一位可以是数字或X
+    
+    Args:
+        data: 包含患者信息的字典
+    
+    Returns:
+        tuple: (是否验证通过, 错误信息列表)
+    """
     errors = []
     
     # 验证必填字段
@@ -55,7 +89,25 @@ def validate_patient_info(data):
     return len(errors) == 0, errors
 
 def save_patient_photo(photo_file, patient_id):
-    """保存患者照片"""
+    """
+    保存患者照片
+    
+    功能：
+    1. 创建患者照片目录
+    2. 如果没有上传照片，使用默认照片
+    3. 验证照片格式
+    4. 保存照片文件
+    
+    Args:
+        photo_file: 上传的照片文件
+        patient_id: 患者ID
+    
+    Returns:
+        str: 照片的相对路径（不包含uploads前缀）
+    
+    Raises:
+        ValueError: 当文件类型不支持时
+    """
     # 创建患者照片目录，不包含 uploads 前缀
     photo_dir = os.path.join(f'patient_{patient_id}', 'photo')
     full_photo_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], photo_dir)
@@ -86,7 +138,15 @@ def save_patient_photo(photo_file, patient_id):
     return photo_path  # 返回不包含 uploads 前缀的相对路径
 
 def get_file_url(path):
-    """获取文件的完整URL"""
+    """
+    获取文件的完整URL
+    
+    Args:
+        path: 文件相对路径
+    
+    Returns:
+        str: 文件的完整URL
+    """
     if not path:
         return None
     return url_for('serve_file', filename=path, _external=True)
@@ -94,7 +154,19 @@ def get_file_url(path):
 @bp.route('', methods=['POST'])
 @jwt_required()
 def create_patient():
-    """导入患者信息"""
+    """
+    创建新患者
+    
+    功能：
+    1. 验证用户身份
+    2. 验证患者信息
+    3. 检查身份证号是否重复
+    4. 保存患者照片
+    5. 创建患者记录
+    
+    Returns:
+        JSON响应，包含创建结果和患者信息
+    """
     try:
         # 验证用户身份
         current_user_id = get_jwt_identity()
@@ -173,7 +245,21 @@ def create_patient():
 @bp.route('', methods=['GET'])
 @jwt_required()
 def list_patients():
-    """获取患者列表"""
+    """
+    获取患者列表
+    
+    功能：
+    1. 验证用户身份
+    2. 分页获取患者列表
+    3. 返回患者基本信息
+    
+    查询参数：
+    - page: 页码，默认1
+    - per_page: 每页数量，默认10
+    
+    Returns:
+        JSON响应，包含患者列表和分页信息
+    """
     try:
         # 获取分页参数
         page = request.args.get('page', 1, type=int)
