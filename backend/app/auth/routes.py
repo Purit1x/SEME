@@ -1,3 +1,6 @@
+# 认证路由模块
+# 处理所有与用户认证相关的路由，包括注册、登录、密码管理等
+
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
 from app.models import Doctor, Administrator
@@ -11,7 +14,15 @@ import random
 bp = Blueprint('auth', __name__)
 
 def validate_password(password):
-    """验证密码强度"""
+    """
+    验证密码强度
+    要求：
+    1. 至少8个字符
+    2. 至少包含一个大写字母
+    3. 至少包含一个小写字母
+    4. 至少包含一个数字
+    5. 至少包含一个特殊字符
+    """
     if len(password) < 8:
         return False, "Password must be at least 8 characters long"
     if not re.search(r"[A-Z]", password):
@@ -25,18 +36,26 @@ def validate_password(password):
     return True, None
 
 def generate_verification_code():
-    """生成6位数字验证码"""
+    """生成6位数字验证码，用于邮箱验证"""
     return ''.join(str(random.randint(0, 9)) for _ in range(6))
 
-# 存储验证码信息
+# 存储验证码信息的字典，用于注册验证
 verification_codes = {}
 
-# 存储密码修改验证码信息
+# 存储密码修改验证码信息的字典，用于密码重置
 password_change_codes = {}
 
 @bp.route('/doctor/register', methods=['POST'])
 def doctor_register():
-    """医生注册第一步：提交基本信息"""
+    """
+    医生注册第一步：提交基本信息
+    功能：
+    1. 验证必要字段（工号、姓名、密码、邮箱、科室）
+    2. 检查工号和邮箱是否已存在
+    3. 验证邮箱格式
+    4. 验证密码强度
+    5. 生成并发送验证码
+    """
     data = request.get_json()
     
     # 验证必要字段
@@ -115,7 +134,14 @@ def doctor_register():
 
 @bp.route('/doctor/verify', methods=['POST'])
 def verify_doctor():
-    """医生注册第二步：验证邮箱"""
+    """
+    医生注册第二步：验证邮箱
+    功能：
+    1. 验证验证码的有效性
+    2. 检查验证码是否过期（30分钟有效期）
+    3. 创建医生账户
+    4. 生成登录令牌
+    """
     data = request.get_json()
     
     if not all(k in data for k in ['verification_id', 'code']):
@@ -181,7 +207,13 @@ def verify_doctor():
 
 @bp.route('/doctor/resend-code', methods=['POST'])
 def resend_verification_code():
-    """重新发送验证码"""
+    """
+    重新发送验证码
+    功能：
+    1. 验证验证ID的有效性
+    2. 生成新的验证码
+    3. 发送新的验证码邮件
+    """
     data = request.get_json()
     
     if 'verification_id' not in data:
@@ -238,7 +270,13 @@ def resend_verification_code():
 
 @bp.route('/doctor/login', methods=['POST'])
 def doctor_login():
-    """医生登录接口"""
+    """
+    医生登录
+    功能：
+    1. 验证登录凭据
+    2. 生成访问令牌和刷新令牌
+    3. 返回登录成功信息和令牌
+    """
     data = request.get_json()
     
     # 验证必要字段
@@ -306,7 +344,13 @@ def doctor_login():
 
 @bp.route('/admin/login', methods=['POST'])
 def admin_login():
-    """管理员登录接口"""
+    """
+    管理员登录
+    功能：
+    1. 验证管理员登录凭据
+    2. 生成访问令牌和刷新令牌
+    3. 返回登录成功信息和令牌
+    """
     data = request.get_json()
     
     if not all(k in data for k in ['admin_id', 'password']):
@@ -345,7 +389,12 @@ def admin_login():
 @bp.route('/refresh', methods=['POST'])
 @jwt_required(refresh=True)
 def refresh():
-    """刷新访问令牌"""
+    """
+    刷新访问令牌
+    功能：
+    1. 验证刷新令牌
+    2. 生成新的访问令牌
+    """
     current_user = get_jwt_identity()
     access_token = create_access_token(identity=current_user)
     return jsonify({
@@ -356,7 +405,12 @@ def refresh():
 @bp.route('/doctor/change-password/send-code', methods=['POST'])
 @jwt_required()
 def send_password_change_code():
-    """发送密码修改验证码"""
+    """
+    发送密码修改验证码
+    功能：
+    1. 验证用户身份
+    2. 生成并发送密码修改验证码
+    """
     current_user_id = get_jwt_identity()
     doctor = Doctor.query.get(current_user_id)
     
@@ -412,7 +466,14 @@ def send_password_change_code():
 @bp.route('/doctor/change-password', methods=['POST'])
 @jwt_required()
 def change_password():
-    """修改密码"""
+    """
+    修改密码
+    功能：
+    1. 验证用户身份
+    2. 验证验证码
+    3. 验证新密码强度
+    4. 更新密码
+    """
     current_user_id = get_jwt_identity()
     doctor = Doctor.query.get(current_user_id)
     
@@ -496,7 +557,12 @@ def change_password():
 @bp.route('/doctors', methods=['GET'])
 @jwt_required()
 def get_doctors():
-    """获取医生列表"""
+    """
+    获取医生列表
+    功能：
+    1. 验证用户身份
+    2. 返回所有医生信息
+    """
     try:
         # 获取所有医生信息
         doctors = Doctor.query.all()
@@ -528,7 +594,12 @@ def get_doctors():
 @bp.route('/doctor/<doctor_id>/ban', methods=['POST'])
 @jwt_required()
 def ban_doctor(doctor_id):
-    """封禁医生账号"""
+    """
+    禁用医生账户
+    功能：
+    1. 验证管理员身份
+    2. 禁用指定医生的账户
+    """
     try:
         # 验证当前用户是否为管理员
         current_user = get_jwt_identity()
@@ -567,7 +638,12 @@ def ban_doctor(doctor_id):
 @bp.route('/doctor/<doctor_id>/unban', methods=['POST'])
 @jwt_required()
 def unban_doctor(doctor_id):
-    """解除医生账号封禁"""
+    """
+    解禁医生账户
+    功能：
+    1. 验证管理员身份
+    2. 解禁指定医生的账户
+    """
     try:
         # 验证当前用户是否为管理员
         current_user = get_jwt_identity()
