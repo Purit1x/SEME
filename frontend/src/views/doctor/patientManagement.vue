@@ -34,9 +34,9 @@
                         <el-button type="primary" link @click="handleView(scope.row)">
                             查看
                         </el-button>
-                        <el-button type="primary" link @click="handleEdit(scope.row)">
+                        <!-- <el-button type="primary" link @click="handleEdit(scope.row)">
                             编辑
-                        </el-button>
+                        </el-button> -->
 
                     </template>
                 </el-table-column>
