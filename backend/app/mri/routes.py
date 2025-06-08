@@ -56,6 +56,9 @@ def get_file_url(path):
 @jwt_required()
 def create_sequence(patient_id):
     """创建新的MRI序列，包括RGB和深度图像"""
+    base_dir = None 
+    seq_dir = None
+    
     try:
         # 验证用户身份
         current_user_id = get_jwt_identity()
@@ -131,10 +134,14 @@ def create_sequence(patient_id):
                 'invalid_rgb_files': invalid_rgb_files,
                 'invalid_depth_files': invalid_depth_files
             }), 400
-        
+
         # 创建序列目录
         seq_dir, rgb_dir, depth_dir = create_sequence_directory(patient_id, seq_name)
-        
+        base_dir = os.path.join(current_app.root_path, '..', 'uploads')
+
+        uploaded_files = []
+        saved_files = []  # 跟踪已保存的文件
+
         # 创建序列记录
         sequence = MRISequence(
             seq_name=seq_name,
@@ -143,67 +150,79 @@ def create_sequence(patient_id):
             created_at=datetime.utcnow()
         )
         db.session.add(sequence)
-        db.session.flush()
-        
-        # 保存文件
-        uploaded_files = []
-        base_dir = os.path.join(current_app.root_path, '..', 'uploads')
-        
+        db.session.flush()  # 确保我们有 sequence.seq_id
+            
+        # 保存所有文件和创建数据库记录
         for i, (rgb_file, depth_file) in enumerate(zip(rgb_files, depth_files)):
             if rgb_file and rgb_file.filename and depth_file and depth_file.filename:
-                # 处理RGB图像
-                rgb_filename = secure_filename(rgb_file.filename)
-                rgb_base, rgb_ext = os.path.splitext(rgb_filename)
-                rgb_path = os.path.join(rgb_dir, f"image_{i+1}{rgb_ext}")
-                
-                # 处理深度图像
-                depth_filename = secure_filename(depth_file.filename)
-                depth_base, depth_ext = os.path.splitext(depth_filename)
-                depth_path = os.path.join(depth_dir, f"image_{i+1}{depth_ext}")
-                
                 try:
-                    # 保存文件时使用基础目录和相对路径
-                    rgb_file.save(os.path.join(base_dir, rgb_path))
-                    depth_file.save(os.path.join(base_dir, depth_path))
+                    # 处理RGB图像
+                    rgb_filename = secure_filename(rgb_file.filename)
+                    rgb_base, rgb_ext = os.path.splitext(rgb_filename)
+                    rgb_path = os.path.join(rgb_dir, f"image_{i+1}{rgb_ext}")
+                    rgb_full_path = os.path.join(base_dir, rgb_path)
+                    
+                    # 处理深度图像
+                    depth_filename = secure_filename(depth_file.filename)
+                    depth_base, depth_ext = os.path.splitext(depth_filename)
+                    depth_path = os.path.join(depth_dir, f"image_{i+1}{depth_ext}")
+                    depth_full_path = os.path.join(base_dir, depth_path)
+                    
+                    # 保存文件
+                    rgb_file.save(rgb_full_path)
+                    saved_files.append(rgb_full_path)
+                    depth_file.save(depth_full_path)
+                    saved_files.append(depth_full_path)
+
+                    # 创建RGB图像记录
+                    rgb_item = MRISeqItem(
+                        item_name=f"image_{i+1}{rgb_ext}",
+                        file_path=rgb_path,
+                        seq_id=sequence.seq_id,
+                        uploaded_at=datetime.utcnow(),
+                        item_type='rgb'
+                    )
+                    db.session.add(rgb_item)
+                    
+                    # 创建深度图像记录
+                    depth_item = MRISeqItem(
+                        item_name=f"image_{i+1}{depth_ext}",
+                        file_path=depth_path,
+                        seq_id=sequence.seq_id,
+                        uploaded_at=datetime.utcnow(),
+                        item_type='depth'
+                    )
+                    db.session.add(depth_item)
+                    
+                    uploaded_files.append({
+                        'index': i + 1,
+                        'rgb': {
+                            'name': f"image_{i+1}{rgb_ext}",
+                            'path': get_file_url(rgb_path)
+                        },
+                        'depth': {
+                            'name': f"image_{i+1}{depth_ext}",
+                            'path': get_file_url(depth_path)
+                        }
+                    })
+
                 except Exception as e:
                     current_app.logger.error(f"Error saving files: {str(e)}")
+                    # 删除已保存的文件
+                    for saved_file in saved_files:
+                        try:
+                            if os.path.exists(saved_file):
+                                os.remove(saved_file)
+                        except Exception as fe:
+                            current_app.logger.error(f"Error cleaning up file {saved_file}: {str(fe)}")
+                    # 确保回滚数据库更改
+                    db.session.rollback()
                     return jsonify({
                         'success': False,
                         'message': '文件上传失败，请检查网络连接后重试'
                     }), 500
-                
-                # 创建RGB图像记录（存储相对路径）
-                rgb_item = MRISeqItem(
-                    item_name=f"image_{i+1}{rgb_ext}",
-                    file_path=rgb_path,
-                    seq_id=sequence.seq_id,
-                    uploaded_at=datetime.utcnow(),
-                    item_type='rgb'
-                )
-                db.session.add(rgb_item)
-                
-                # 创建深度图像记录（存储相对路径）
-                depth_item = MRISeqItem(
-                    item_name=f"image_{i+1}{depth_ext}",
-                    file_path=depth_path,
-                    seq_id=sequence.seq_id,
-                    uploaded_at=datetime.utcnow(),
-                    item_type='depth'
-                )
-                db.session.add(depth_item)
-                
-                uploaded_files.append({
-                    'index': i + 1,
-                    'rgb': {
-                        'name': f"image_{i+1}{rgb_ext}",
-                        'path': get_file_url(rgb_path)
-                    },
-                    'depth': {
-                        'name': f"image_{i+1}{depth_ext}",
-                        'path': get_file_url(depth_path)
-                    }
-                })
-        
+
+        # 如果一切正常，提交数据库更改
         db.session.commit()
         
         return jsonify({
@@ -218,10 +237,22 @@ def create_sequence(patient_id):
                 'created_at': sequence.created_at.isoformat()
             }
         })
-        
+            
     except Exception as e:
-        db.session.rollback()
         current_app.logger.error(f"Error in create_sequence: {str(e)}")
+        # 确保回滚任何数据库更改
+        db.session.rollback()
+        
+        # 删除任何已保存的文件
+        if base_dir and seq_dir:
+            try:
+                full_seq_dir = os.path.join(base_dir, seq_dir)
+                if os.path.exists(full_seq_dir):
+                    import shutil
+                    shutil.rmtree(full_seq_dir)
+            except Exception as e:
+                current_app.logger.error(f"Error cleaning up sequence directory: {str(e)}")
+        
         return jsonify({
             'success': False,
             'message': '序列创建失败，请稍后重试'
@@ -554,4 +585,4 @@ def get_patient_sequences(patient_id):
         return jsonify({
             'success': False,
             'message': f'获取患者序列失败: {str(e)}'
-        }), 500 
+        }), 500
