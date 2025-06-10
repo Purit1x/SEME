@@ -118,3 +118,16 @@ class PredRecord(db.Model):
             'processed_depth_path': self.processed_depth_path,
             'result_path': self.result_path
         }
+
+# app/models.py - 数据模型定义
+"""
+SQLAlchemy数据库模型:
+- Doctor: 医生用户模型
+- Administrator: 管理员模型
+- MRISequence: MRI序列模型
+- MRISeqItem: MRI图像条目模型
+- Patient: 患者模型
+- PredRecord: 预测记录模型
+
+包含字段定义、关系映射和辅助方法
+"""
