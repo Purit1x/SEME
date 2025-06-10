@@ -1,0 +1,25 @@
+.el-button.is-round {
+    border-radius: 49px;
+  }
+
+  .el-form-item {
+    margin-bottom: 0;
+  }
+
+  .el-form-item.is-error .el-input__inner,
+  .el-form-item.is-error .el-input__inner:focus,
+  .el-form-item.is-error .el-select-v2__wrapper,
+  .el-form-item.is-error .el-select-v2__wrapper:focus,
+  .el-form-item.is-error .el-textarea__inner,
+  .el-form-item.is-error .el-textarea__inner:focus {
+    box-shadow: none;
+  }
+
+  .el-input {
+    align-items: center;
+    margin-right: 8px;
+  }
+
+  .el-input .el-input__icon {
+    font-size: 1.4em;
+  }
