@@ -45,7 +45,7 @@
                                     </el-image>
                                 </template>
                             </el-table-column>
-                            <!-- <el-table-column label="深度图像" width="300">
+                            <el-table-column label="深度图像" width="300">
                                 <template #default="scope">
                                     <el-image :src="scope.row.depth.path" :preview-src-list="[scope.row.depth.path]"
                                         fit="contain" class="preview-image">
@@ -57,7 +57,7 @@
                                         </template>
                                     </el-image>
                                 </template>
-                            </el-table-column> -->
+                            </el-table-column>
                             <el-table-column label="上传时间">
                                 <template #default="scope">
                                     {{ new Date(scope.row.rgb.uploaded_at).toLocaleString() }}

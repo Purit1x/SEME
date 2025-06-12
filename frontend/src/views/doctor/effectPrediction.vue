@@ -49,12 +49,12 @@
                             </el-icon>
                             <span>RGB图像</span>
                         </div>
-                        <div class="file-item" @click="selectImageType('depth')">
+                        <!-- <div class="file-item" @click="selectImageType('depth')">
                             <el-icon>
                                 <Picture />
                             </el-icon>
                             <span>深度图像</span>
-                        </div>
+                        </div> -->
                     </div>
 
                     <!-- 缩略图列表 -->
