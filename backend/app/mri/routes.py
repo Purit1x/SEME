@@ -1,3 +1,6 @@
+# MRI模块路由文件
+# 处理所有与MRI序列相关的路由，包括创建、查询、获取图像等功能
+
 import os
 from flask import request, jsonify, current_app, url_for, send_from_directory, send_file
 from flask_jwt_extended import jwt_required, get_jwt_identity
@@ -10,17 +13,30 @@ import json
 from ..auth.auth_utils import token_required
 
 def allowed_file(filename, file_type='rgb'):
-    """检查文件类型是否允许
+    """
+    检查文件类型是否允许
     
     Args:
         filename: 文件名
         file_type: 文件类型，'rgb' 或 'depth'
+    
+    Returns:
+        bool: 如果文件类型允许返回True，否则返回False
     """
     ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'bmp'}
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def create_sequence_directory(patient_id, seq_name):
-    """创建序列文件夹，包括RGB和深度图像子文件夹"""
+    """
+    创建序列文件夹，包括RGB和深度图像子文件夹
+    
+    Args:
+        patient_id: 患者ID
+        seq_name: 序列名称
+    
+    Returns:
+        tuple: (序列目录路径, RGB图像目录路径, 深度图像目录路径)
+    """
     # 构建相对路径（不包含uploads前缀）
     patient_dir = os.path.join(f'patient_{patient_id}', 'sequences')
     seq_dir = os.path.join(patient_dir, secure_filename(seq_name))
@@ -38,13 +54,30 @@ def create_sequence_directory(patient_id, seq_name):
     return seq_dir, rgb_dir, depth_dir
 
 def get_user_type(user_id):
-    """获取用户类型"""
+    """
+    获取用户类型
+    
+    Args:
+        user_id: 用户ID
+    
+    Returns:
+        tuple: (用户类型, 用户ID)
+        用户类型可能是 'admin' 或 'doctor'
+    """
     if user_id.startswith('admin_'):
         return 'admin', int(user_id.replace('admin_', ''))
     return 'doctor', user_id
 
 def get_file_url(path):
-    """获取文件的完整URL"""
+    """
+    获取文件的完整URL
+    
+    Args:
+        path: 文件相对路径
+    
+    Returns:
+        str: 文件的完整URL
+    """
     if not path:
         return None
     # 确保路径使用正斜杠
@@ -55,7 +88,24 @@ def get_file_url(path):
 @bp.route('/patients/<int:patient_id>/sequences', methods=['POST'])
 @jwt_required()
 def create_sequence(patient_id):
-    """创建新的MRI序列，包括RGB和深度图像"""
+    """
+    创建新的MRI序列，包括RGB和深度图像
+    
+    功能：
+    1. 验证用户身份
+    2. 检查患者是否存在
+    3. 验证序列名称
+    4. 验证上传的文件
+    5. 创建序列目录
+    6. 保存图像文件
+    7. 创建数据库记录
+    
+    Args:
+        patient_id: 患者ID
+    
+    Returns:
+        JSON响应，包含创建结果
+    """
     base_dir = None 
     seq_dir = None
     
@@ -261,7 +311,21 @@ def create_sequence(patient_id):
 @bp.route('/patients/<int:patient_id>/sequences/<int:seq_id>', methods=['GET'])
 @jwt_required()
 def get_sequence(patient_id, seq_id):
-    """获取序列详情"""
+    """
+    获取指定MRI序列的详细信息
+    
+    功能：
+    1. 验证用户身份
+    2. 获取序列信息
+    3. 获取序列中的所有图像信息
+    
+    Args:
+        patient_id: 患者ID
+        seq_id: 序列ID
+    
+    Returns:
+        JSON响应，包含序列详细信息
+    """
     sequence = MRISequence.query.filter_by(
         seq_id=seq_id,
         patient_id=patient_id
@@ -311,7 +375,19 @@ def get_sequence(patient_id, seq_id):
 @bp.route('/patients/<int:patient_id>/sequences', methods=['GET'])
 @jwt_required()
 def list_sequences(patient_id):
-    """获取患者的所有序列"""
+    """
+    获取患者的所有MRI序列列表
+    
+    功能：
+    1. 验证用户身份
+    2. 获取患者的所有序列信息
+    
+    Args:
+        patient_id: 患者ID
+    
+    Returns:
+        JSON响应，包含序列列表
+    """
     patient = Patient.query.get(patient_id)
     if not patient:
         return jsonify({
@@ -339,7 +415,21 @@ def list_sequences(patient_id):
 @bp.route('/patients/<int:patient_id>/sequences/<int:seq_id>/images/<int:image_index>', methods=['GET'])
 @jwt_required()
 def get_sequence_image_db(patient_id, seq_id, image_index):
-    """从数据库获取序列中的图像"""
+    """
+    获取序列中指定索引的图像信息
+    
+    功能：
+    1. 验证用户身份
+    2. 获取指定索引的RGB和深度图像信息
+    
+    Args:
+        patient_id: 患者ID
+        seq_id: 序列ID
+        image_index: 图像索引
+    
+    Returns:
+        JSON响应，包含图像信息
+    """
     try:
         # 检查序列是否存在
         sequence = MRISequence.query.filter_by(
@@ -402,6 +492,17 @@ def get_sequence_image_db(patient_id, seq_id, image_index):
 @bp.route('/needle', methods=['POST'])
 @jwt_required()
 def save_needled_image():
+    """
+    保存带有针头标记的图像
+    
+    功能：
+    1. 验证用户身份
+    2. 保存标记后的图像
+    3. 更新数据库记录
+    
+    Returns:
+        JSON响应，包含保存结果
+    """
     try:
         current_app.logger.info('开始处理布针图片保存请求')
         # 获取表单数据
@@ -501,7 +602,21 @@ def save_needled_image():
 @bp.route('/patients/<patient_id>/sequences/<seq_id>/images/<int:image_index>', methods=['GET'])
 @jwt_required()
 def get_sequence_image_file(patient_id, seq_id, image_index):
-    """从文件系统获取序列中的图像"""
+    """
+    获取序列中指定索引的图像文件
+    
+    功能：
+    1. 验证用户身份
+    2. 获取并返回图像文件
+    
+    Args:
+        patient_id: 患者ID
+        seq_id: 序列ID
+        image_index: 图像索引
+    
+    Returns:
+        图像文件
+    """
     try:
         # 获取图像类型（RGB或深度）
         image_type = request.args.get('type', 'rgb')
@@ -537,6 +652,19 @@ def get_sequence_image_file(patient_id, seq_id, image_index):
 @bp.route('/patients/<patient_id>/sequences', methods=['GET'])
 @jwt_required()
 def get_patient_sequences(patient_id):
+    """
+    获取患者的所有MRI序列
+    
+    功能：
+    1. 验证用户身份
+    2. 获取患者的所有序列信息
+    
+    Args:
+        patient_id: 患者ID
+    
+    Returns:
+        JSON响应，包含序列列表
+    """
     try:
         # 构建序列目录路径
         sequences_path = os.path.join(
